@@ -1,0 +1,19 @@
+#	####################################################
+#	СИНТАКСИЧЕСКАЯ РАСКРАСКА ДЛЯ БИБИЛИОТЕКИ:
+#	iarduino_IR_Thermometer
+#	####################################################
+#	ТИПЫ ДАННЫХ:							   (KEYWORD1)
+	iarduino_IR_Thermometer	KEYWORD1
+#	####################################################
+#	МЕТОДЫ И ФУНКЦИИ:						   (KEYWORD2)
+	begin	KEYWORD2
+	read	KEYWORD2
+	newID	KEYWORD2
+	serial	KEYWORD2
+	temp	KEYWORD2
+	tempA	KEYWORD2
+#	####################################################
+#	КОНСТАНТЫ:								   (LITERAL1)
+	IRT_OK	LITERAL1
+	IRT_NO_REPLY	LITERAL1
+	IRT_CHECKSUM	LITERAL1
