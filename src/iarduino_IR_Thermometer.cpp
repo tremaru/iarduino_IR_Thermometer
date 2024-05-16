@@ -1,41 +1,40 @@
 #include "iarduino_IR_Thermometer.h"
 /**	пользовательские функции **/
-			iarduino_IR_Thermometer::iarduino_IR_Thermometer(uint8_t i){	//	объявление экземпляра объекта с указанием адреса датчика на шине I2C
-				if(i){IRT_uint_ADDRESS=i;}									//	сохраняем адрес датчика на шине I2C
-			}
 
 //			инициализация датчика
-int			iarduino_IR_Thermometer::begin(){
-//				выключаем ШИМ на выходе датчика
-				pinMode		(SCL, OUTPUT);	delay(100);						//	Переводим вывод SCL  шины I2C в режим выхода и ожидаем звершение переходных процессов в датчике, связанных с подачей питания
-				digitalWrite(SCL, HIGH);	delay(1);						//	Устанавливаем 1 на выводе SCL в течении 1мс
-				digitalWrite(SCL, LOW);		delay(3);						//	Устанавливаем 0 на выводе SCL в течении 3мс // Выключаем режим ШИМ, если таковой был включён
-				digitalWrite(SCL, HIGH);	delay(1);						//	Устанавливаем 1 на выводе SCL в течении 1мс
-				I2C_func_BEGIN();											//	Инициируем работу по шине I2C
+int			iarduino_IR_Thermometer::IRT_begin(int scl){					//
+//				Выключаем ШИМ на выходе датчика								//
+				if( scl ){													//
+					pinMode		(scl, OUTPUT);	delay(100);					//	Переводим вывод scl  шины I2C в режим выхода и ожидаем звершение переходных процессов в датчике, связанных с подачей питания
+					digitalWrite(scl, HIGH);	delay(1);					//	Устанавливаем 1 на выводе scl в течении 1мс
+					digitalWrite(scl, LOW);		delay(3);					//	Устанавливаем 0 на выводе scl в течении 3мс // Выключаем режим ШИМ, если таковой был включён
+					digitalWrite(scl, HIGH);	delay(1);					//	Устанавливаем 1 на выводе scl в течении 1мс
+//					Переинициируем шину I2C									//
+					selI2C->begin();										//	Переинициируем шину I2C.
+				}															//
 //				читаем состояние регистра настроек ШИМ датчика
 				IRT_data_COM=IRT_code_ROM|IRT_addr_PWM;						//	Собираем команду из кода доступа к ПЗУ и адреса ячейки с указанием настроек ШИМ
 				I2C_func_READ();											//	Отправляем команду и читаем данные из датчика по шине I2C
-				I2C_func_READ();											//	Повторно отправляем ту же команду, т.к. при самой первой команде, датчик отправляет карявый CRC
-				if(!I2C_mass_STATUS[2]){return IRT_NO_REPLY;}				//	Если произошла ошибка при чтении, то возвращаем ошибку IRT_NO_REPLY
-				if(IRT_data_CRC!=IRT_func_CRC8(1)){return IRT_CHECKSUM;}	//	Если не CRC не совпадает с рассчитанным, то возвращаем ошибку IRT_CHECKSUM
-//				меняем состояние регистра настроек ШИМ датчика
-				if(IRT_data_LSB&0x06){IRT_data_LSB&=0xF9;I2C_func_WRITE();}	//	Если установлены 2 или 1 биты регистра настроек ШИМ (вывод SDA сконфигурирован как двухтактный, или включён режим ШИМ), то сбрасываем их
-				if(!I2C_mass_STATUS[2]){return IRT_NO_REPLY;}				//	Если произошла ошибка при записи, то возвращаем ошибку IRT_NO_REPLY
-				return IRT_OK;
+				if( !I2C_func_READ()){return IRT_NO_REPLY;}					//	Если произошла ошибка при чтении, то возвращаем ошибку IRT_NO_REPLY
+				if( IRT_data_CRC!=IRT_func_CRC8(1) ){return IRT_CHECKSUM;}	//	Если не CRC не совпадает с рассчитанным, то возвращаем ошибку IRT_CHECKSUM
+//				меняем состояние регистра настроек ШИМ датчика				//
+				if(IRT_data_LSB&0x06){										//	Если установлены 2 или 1 биты регистра настроек ШИМ, то сбрасываем их
+					IRT_data_LSB&=0xF9;										//
+					if( !I2C_func_WRITE() ){return IRT_NO_REPLY;}			//	Если произошла ошибка при записи, то возвращаем ошибку IRT_NO_REPLY
+				}															//
+				return IRT_OK;												//
 }
 
 int			iarduino_IR_Thermometer::read(){								//	Читаем показания датчика
 //				читаем температуру объекта
 				IRT_data_COM=IRT_code_RAM|IRT_addr_To1;						//	Собираем команду из кода доступа к ОЗУ и адреса ячейки с результатом вычисления температуры объекта (1 датчик)
-				I2C_func_READ();											//	Отправляем команду и читаем данные из датчика по шине I2C
-				if(!I2C_mass_STATUS[2]){return IRT_NO_REPLY;}				//	Если произошла ошибка при чтении, то возвращаем ошибку IRT_NO_REPLY
+				if( !I2C_func_READ()){return IRT_NO_REPLY;}					//	Отправляем команду и читаем данные из датчика по шине I2C
 				if(IRT_data_CRC!=IRT_func_CRC8(1)){return IRT_CHECKSUM;}	//	Если CRC не совпадает с рассчитанным, то возвращаем ошибку IRT_CHECKSUM
 				temp = (double)(((IRT_data_MSB&0x7F)<<8)+IRT_data_LSB);		//	Сохраняем старший и младштй байт данных о температуре объекта
 				temp = (temp*0.02)-273.15;									//	Корректируем данные о температуре объекта и переводим из °K в °С
 //				читаем температуру окружающей среды
 				IRT_data_COM=IRT_code_RAM|IRT_addr_Ta;						//	Собираем команду из кода доступа к ОЗУ и адреса ячейки с результатом вычисления температуры окружающей среды
-				I2C_func_READ();											//	Отправляем команду и читаем данные из датчика по шине I2C
-				if(!I2C_mass_STATUS[2]){return IRT_NO_REPLY;}				//	Если произошла ошибка при чтении, то возвращаем ошибку IRT_NO_REPLY
+				if( !I2C_func_READ()){return IRT_NO_REPLY;}					//	Отправляем команду и читаем данные из датчика по шине I2C
 				if(IRT_data_CRC!=IRT_func_CRC8(1)){return IRT_CHECKSUM;}	//	Если CRC не совпадает с рассчитанным, то возвращаем ошибку IRT_CHECKSUM
 				tempA = (double)(((IRT_data_MSB&0x7F)<<8)+IRT_data_LSB);	//	Сохраняем старший и младштй байт данных о температуре окружающей среды
 				tempA = (tempA*0.02)-273.15;								//	Корректируем данные о температуре окружающей среды и переводим из °K в °С
@@ -46,8 +45,8 @@ int			iarduino_IR_Thermometer::newID(uint8_t a){						//	Установка но
 //				читаем текущий адрес датчика на шине
 				IRT_data_COM=IRT_code_ROM|IRT_addr_ID;						//	Собираем команду из кода доступа к ПЗУ и адреса ячейки с указанием ID адреса датчика на шине I2C
 				I2C_func_READ();											//	Отправляем команду и читаем данные из датчика по шине I2C
-				IRT_data_MSB=0; IRT_data_LSB=a; I2C_func_WRITE();			//	Отправляем новый адрес датчику
-				if(!I2C_mass_STATUS[2]){return IRT_NO_REPLY;}				//	Если произошла ошибка при записи, то возвращаем ошибку IRT_NO_REPLY
+				IRT_data_MSB=0; IRT_data_LSB=a;								//
+				if( !I2C_func_WRITE() ){return IRT_NO_REPLY;}				//	Отправляем новый адрес датчику
 				IRT_uint_ADDRESS=a;											//	Сохраняем новый адрес для общения с датчиком
 				return IRT_OK;
 }
@@ -80,31 +79,28 @@ uint8_t		iarduino_IR_Thermometer::IRT_func_CRC8(bool a){					//	a=0-запись
 }
 
 /** внутренние функции для работы с шиной I2C **/
-void		iarduino_IR_Thermometer::I2C_func_START			()												{int I2C_var_I=0;    I2C_mass_STATUS[2]=1; TWCR = _BV(TWINT) | _BV(TWEN) | _BV(TWSTA); while(!(TWCR & _BV(TWINT))){I2C_var_I++; if(I2C_var_I>I2C_mass_STATUS[1]){I2C_mass_STATUS[2]=0; break;}} I2C_mass_STATUS[3] = TWSR & 0xF8; if(I2C_mass_STATUS[3]!=0x08){I2C_mass_STATUS[2]=0;}}
-void		iarduino_IR_Thermometer::I2C_func_RESTART		()												{int I2C_var_I=0; if(I2C_mass_STATUS[2]){  TWCR = _BV(TWINT) | _BV(TWEN) | _BV(TWSTA); while(!(TWCR & _BV(TWINT))){I2C_var_I++; if(I2C_var_I>I2C_mass_STATUS[1]){I2C_mass_STATUS[2]=0; break;}} I2C_mass_STATUS[3] = TWSR & 0xF8; if(I2C_mass_STATUS[3]!=0x10){I2C_mass_STATUS[2]=0;}}}
-void		iarduino_IR_Thermometer::I2C_func_SEND_ID		(uint8_t I2C_byte_ID, bool I2C_bit_RW)			{int I2C_var_I=0; if(I2C_mass_STATUS[2]){  TWDR = (I2C_byte_ID<<1)+I2C_bit_RW; TWCR = _BV(TWINT) | _BV(TWEN); while(!(TWCR & _BV(TWINT))){I2C_var_I++; if(I2C_var_I>I2C_mass_STATUS[1]){I2C_mass_STATUS[2]=0; break;}} I2C_mass_STATUS[3] = TWSR & 0xF8; if(I2C_bit_RW){ if(I2C_mass_STATUS[3]!=0x40){I2C_mass_STATUS[2]=0;}}else{if(I2C_mass_STATUS[3]!=0x18){I2C_mass_STATUS[2]=0;}}}}
-void		iarduino_IR_Thermometer::I2C_func_WRITE_BYTE	(uint8_t I2C_byte_DATA)							{int I2C_var_I=0; if(I2C_mass_STATUS[2]){  TWDR = I2C_byte_DATA; TWCR = _BV(TWINT) | _BV(TWEN); while(!(TWCR & _BV(TWINT))){I2C_var_I++; if(I2C_var_I>I2C_mass_STATUS[1]){I2C_mass_STATUS[2]=0; break;}} I2C_mass_STATUS[3] = TWSR & 0xF8; if(I2C_mass_STATUS[3]!=0x28){I2C_mass_STATUS[2]=0;}}}
-uint8_t		iarduino_IR_Thermometer::I2C_func_READ_BYTE		(bool I2C_bit_ACK)								{int I2C_var_I=0; if(I2C_mass_STATUS[2]){  TWCR = _BV(TWINT) | _BV(TWEN) | I2C_bit_ACK<<TWEA; while(!(TWCR & _BV(TWINT))){I2C_var_I++; if(I2C_var_I>I2C_mass_STATUS[1]){I2C_mass_STATUS[2]=0; break;}} I2C_mass_STATUS[3] = TWSR & 0xF8; if(I2C_bit_ACK){if(I2C_mass_STATUS[3]!=0x50){I2C_mass_STATUS[2]=0;}}else{if(I2C_mass_STATUS[3]!=0x58){I2C_mass_STATUS[2]=0;}} return TWDR;}else{return 0xFF;}}
-void		iarduino_IR_Thermometer::I2C_func_STOP			()												{int I2C_var_I=0; TWCR = _BV(TWINT) | _BV(TWEN) | _BV(TWSTO); while(!(TWCR & _BV(TWSTO))){I2C_var_I++; if(I2C_var_I>I2C_mass_STATUS[1]){I2C_mass_STATUS[2]=0; break;}} delayMicroseconds(20);}
-void		iarduino_IR_Thermometer::I2C_func_BEGIN			()												{    I2C_mass_STATUS[2]=1; TWBR=((F_CPU/(I2C_mass_STATUS[0]*1000))-16)/2; if(TWBR<10){TWBR=10;} TWSR&=(~(_BV(TWPS1)|_BV(TWPS0)));}
 
-void		iarduino_IR_Thermometer::I2C_func_READ(){						//	Читаем показания датчика
-				I2C_func_START();											//	Отправляем команду START
-				I2C_func_SEND_ID(IRT_uint_ADDRESS, 0);						//	Отправляем адрес модуля и бит RW=0 (запись данных в датчик)
-				I2C_func_WRITE_BYTE(IRT_data_COM);							//	Отправляем данные команды из IRT_data_COM
-				I2C_func_RESTART();											//	Отправляем команду RESTART
-				I2C_func_SEND_ID(IRT_uint_ADDRESS, 1);						//	Отправляем адрес модуля и бит RW=1 (чтение данных из датчика)
-				IRT_data_LSB=I2C_func_READ_BYTE(true);						//	Читаем младший байт из регистра с отправкой бита ACK
-				IRT_data_MSB=I2C_func_READ_BYTE(true);						//	Читаем старший байт из регистра с отправкой бита ACK
-				IRT_data_CRC=I2C_func_READ_BYTE(false);						//	Читаем байт циклически изб.кода с отправкой бита NACK
-				I2C_func_STOP();											//	Отправляем команду STOP
-}
-void		iarduino_IR_Thermometer::I2C_func_WRITE(){						//	Записываем данные в датчик
-				I2C_func_START();											//	Отправляем команду START
-				I2C_func_SEND_ID(IRT_uint_ADDRESS, 0);						//	Отправляем адрес модуля и бит RW=0 (запись данных в датчик)
-				I2C_func_WRITE_BYTE(IRT_data_COM);							//	Отправляем данные команды из IRT_data_COM
-				I2C_func_WRITE_BYTE(IRT_data_LSB);							//	Отправляем младший байт данных
-				I2C_func_WRITE_BYTE(IRT_data_MSB);							//	Отправляем старший байт данных
-				I2C_func_WRITE_BYTE(IRT_func_CRC8(0));						//	Отправляем циклически избыточный код
-				I2C_func_STOP();											//	Отправляем команду STOP
-}
+bool		iarduino_IR_Thermometer::I2C_func_READ(void){					//	Читаем показания датчика
+				bool	result=false;										//	Определяем флаг       для хранения результата чтения.
+				uint8_t	sumtry=10;											//	Определяем переменную для подсчёта количества оставшихся попыток чтения.
+				uint8_t	data[3];											//	Объявляем  массив     для хранения получаемых данных.
+			do{	result = selI2C->readBytes(IRT_uint_ADDRESS, IRT_data_COM, data, 3);	//	Отправляем модулю IRT_uint_ADDRESS комаду(адрес регистра) IRT_data_COM и считываем 3 байта в массив data.
+				sumtry--;	if(!result){delay(1);}							//	Уменьшаем количество попыток чтения и устанавливаем задержку при неудаче.
+			}	while		(!result && sumtry>0);							//	Повторяем чтение если оно завершилось неудачей, но не более sumtry попыток.
+				IRT_data_LSB=data[0];										//	Сохраняем младший байт.
+				IRT_data_MSB=data[1];										//	Сохраняем старший байт.
+				IRT_data_CRC=data[2];										//	Сохраняем байт CRC.
+				delayMicroseconds(500);										//	Между пакетами необходимо выдерживать паузу.
+			return result;													//	Возвращаем результат чтения (true/false).
+}																			//
+
+bool	iarduino_IR_Thermometer::I2C_func_WRITE(void){						//	Записываем данные в датчик
+			bool	result=false;											//	Определяем флаг       для хранения результата записи.
+			uint8_t	sumtry=10;												//	Определяем переменную для подсчёта количества оставшихся попыток записи.
+			uint8_t	data[3]={IRT_data_LSB,IRT_data_MSB,IRT_func_CRC8(0)};	//	Объявляем  массив для передачи данных.
+			do{	result = selI2C->writeBytes(IRT_uint_ADDRESS, IRT_data_COM, data, 3);	//	Записываем в модуль valAddr начиная с регистра reg, sum байи из массива data начиная с элемента num.
+				sumtry--;	if(!result){delay(1);}							//	Уменьшаем количество попыток записи и устанавливаем задержку при неудаче.
+			}	while		(!result && sumtry>0);							//	Повторяем запись если она завершилась неудачей, но не более sumtry попыток.
+			delay(10);														//	Ждём применения модулем записанных данных.
+			return result;													//	Возвращаем результат записи (true/false).
+}																			//

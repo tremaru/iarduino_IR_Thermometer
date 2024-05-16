@@ -1,5 +1,5 @@
 //	Библиотека позволяет работать с ИК-термометром на базе чипа MLX90614ESF-AAA: http://
-//  Версия: 1.0.0
+//  Версия: 1.0.1
 //  Последнюю версию библиотеки Вы можете скачать по ссылке: http://
 //  Подробное описание функции бибилиотеки доступно по ссылке: http://
 //  Библиотека является собственностью интернет магазина iarduino.ru и может свободно использоваться и распространяться!
@@ -16,6 +16,15 @@
 #else
 #include <WProgram.h>
 #endif
+
+#include	"iarduino_IR_Thermometer_I2C.h"						//	Подключаем библиотеку выбора реализации шины I2C.
+																//
+#if defined(TwoWire_h) || defined(__ARDUINO_WIRE_IMPLEMENTATION__) || defined(__AVR_ATmega328__) || defined(__AVR_ATmega32U4__) || defined(__AVR_ATmega1284P__) || defined(__AVR_ATmega2560__) || defined(ESP8266) || defined(ESP32) || defined(ARDUINO_ARCH_RP2040) || defined(RENESAS_CORTEX_M4) // Если подключена библиотека Wire или платы её поддерживают...
+#include	<Wire.h>											//	Разрешаем использовать библиотеку Wire в данной библиотеке.
+#endif															//
+#if defined( iarduino_I2C_Software_h )							//	Если библиотека iarduino_I2C_Software подключена в скетче...
+#include	<iarduino_I2C_Software.h>							//	Разрешаем использовать библиотеку iarduino_I2C_Software в данной библиотеке.
+#endif															//
 
 #define	IRT_OK				0									//	Данные получены и обработаны без ошибок
 #define	IRT_NO_REPLY		-1									//	Данных нет, датчик не реагирует или отсутствует
@@ -46,10 +55,22 @@
 
 class iarduino_IR_Thermometer{
 	public:
+	/**	Конструктор класса **/																									//
+		iarduino_IR_Thermometer(uint8_t i=0x5A){				//	объявление экземпляра объекта с указанием адреса датчика на шине I2C
+			if(i){												//
+				IRT_uint_ADDRESS = i;							//	сохраняем адрес датчика на шине I2C
+				selI2C = new iarduino_I2C_Select;				//	Переопределяем указатель selI2C на объект производного класса iarduino_I2C_Select.
+			}													//
+		}														//
+
 	/**	пользовательские функции **/
-		iarduino_IR_Thermometer			(uint8_t=0);			//	подключение датчика				( [адрес на шине I2C] )
-		int		begin  					();						//	инициализация датчика			()
-		int		read   					();						//	чтение показаний датчика		()
+		#if defined(TwoWire_h) || defined(__ARDUINO_WIRE_IMPLEMENTATION__)
+		int		begin					(TwoWire* i=&Wire, int scl=0){ selI2C->begin(i); return IRT_begin( scl?scl:selI2C->getPinSCL() ); }	//	Инициализация	([объект для работы с аппаратной шиной I2C], [вывод SCL]).
+		#endif													//
+		#if defined(iarduino_I2C_Software_h)					//
+		int		begin					(SoftTwoWire* i  , int scl=0){ selI2C->begin(i); return IRT_begin( scl?scl:selI2C->getPinSCL() ); }	//	Инициализация	(объект для работы с программной шиной I2C, [вывод SCL]).
+		#endif													//
+		int		read   					(void);					//	чтение показаний датчика		()
 		int		newID					(uint8_t);				//	установка адреса на шине I2C	( адрес на шине I2C )
 	   uint16_t	serial					(uint8_t);				//	получение серийного номера		( позиция )
 
@@ -59,27 +80,20 @@ class iarduino_IR_Thermometer{
 		
 	private:
 	/**	внутренние функции **/
-		uint8_t	IRT_func_CRC8(bool);							//	создание	циклически избыточного кода	CRC8			( 0-запись / 1-чтение )
+		int		IRT_begin  				(int);					//	инициализация датчика									( номер вывода SCL    )
+		uint8_t	IRT_func_CRC8			(bool);					//	создание	циклически избыточного кода	CRC8			( 0-запись / 1-чтение )
 
 	/**	внутренние переменные **/
-		uint8_t	IRT_uint_ADDRESS		=	0x5A;				//	адрес		датчика на шине I2C
+		uint8_t	IRT_uint_ADDRESS;								//	адрес		датчика на шине I2C
 		uint8_t	IRT_data_COM;									//	данные		команды датчика
 		uint8_t	IRT_data_MSB;									//	данные		старший байт
 		uint8_t	IRT_data_LSB;									//	данные		младший байт
 		uint8_t	IRT_data_CRC;									//	данные		циклически избыточный код
-	   uint16_t	I2C_mass_STATUS[0x04]	=	{100,1000,1,0x78};	//	скорость	работы шины в кГц (макс F_CPU/2  ), ожидание сброса флага TWINT в циклах, флаг успешного результата, содержимое флагов TWS регистра состояния TWSR
 
 	/**	функции для работы с шиной I2C **/
-		void	I2C_func_BEGIN			();						//	установка	скорости работы шины I2C					(без параметров)
-		void	I2C_func_START			();						//	выполнение	состояния START								(без параметров)
-		void	I2C_func_RESTART		();						//	выполнение	состояния RESTART							(без параметров)
-		void	I2C_func_STOP			();						//	выполнение	состояния STOP								(без параметров)
-		void	I2C_func_SEND_ID		(uint8_t, bool);		//	передача	первого байта								(ID-адрес модуля, бит RW)
-		void	I2C_func_WRITE_BYTE		(uint8_t);				//	передача	одного байта								(байт для передачи)
-		uint8_t	I2C_func_READ_BYTE		(bool);					//	получение	одного байта								(бит подтверждения ACK/NACK)
-		
-		void	I2C_func_READ			();						//	чтение      данных из датчика
-		void	I2C_func_WRITE			();						//	запись		данных в датчик
+		iarduino_I2C_VirtualSelect*		selI2C;					//	Объявляем  указатель  на  объект полиморфного класса iarduino_I2C_VirtualSelect, но в конструкторе текущего класса этому указателю будет присвоена ссылка на производный класс iarduino_I2C_Select.
+		bool	I2C_func_READ			(void);					//	чтение      данных из датчика
+		bool	I2C_func_WRITE			(void);					//	запись		данных в датчик
 };
 
 #endif
