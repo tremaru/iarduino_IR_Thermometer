@@ -1,6 +1,6 @@
 //	Библиотека позволяет работать с ИК-термометром на базе чипа MLX90614ESF-AAA: http://
-//  Версия: 1.0.1
-//  Последнюю версию библиотеки Вы можете скачать по ссылке: http://
+//  Версия: 1.0.2
+//  Последнюю версию библиотеки Вы можете скачать по ссылке: https://iarduino.ru/file/632.html
 //  Подробное описание функции бибилиотеки доступно по ссылке: http://
 //  Библиотека является собственностью интернет магазина iarduino.ru и может свободно использоваться и распространяться!
 //  При публикации устройств или скетчей с использованием данной библиотеки, как целиком, так и её частей,
@@ -65,10 +65,10 @@ class iarduino_IR_Thermometer{
 
 	/**	пользовательские функции **/
 		#if defined(TwoWire_h) || defined(__ARDUINO_WIRE_IMPLEMENTATION__)
-		int		begin					(TwoWire* i=&Wire, int scl=0){ selI2C->begin(i); return IRT_begin( scl?scl:selI2C->getPinSCL() ); }	//	Инициализация	([объект для работы с аппаратной шиной I2C], [вывод SCL]).
+		int		begin					(TwoWire* i=&Wire, int scl=0){ selI2C->init(i); return IRT_begin( scl?scl:selI2C->getPinSCL() ); }	//	Инициализация	([объект для работы с аппаратной шиной I2C], [вывод SCL]).
 		#endif													//
 		#if defined(iarduino_I2C_Software_h)					//
-		int		begin					(SoftTwoWire* i  , int scl=0){ selI2C->begin(i); return IRT_begin( scl?scl:selI2C->getPinSCL() ); }	//	Инициализация	(объект для работы с программной шиной I2C, [вывод SCL]).
+		int		begin					(SoftTwoWire* i  , int scl=0){ selI2C->init(i); return IRT_begin( scl?scl:selI2C->getPinSCL() ); }	//	Инициализация	(объект для работы с программной шиной I2C, [вывод SCL]).
 		#endif													//
 		int		read   					(void);					//	чтение показаний датчика		()
 		int		newID					(uint8_t);				//	установка адреса на шине I2C	( адрес на шине I2C )

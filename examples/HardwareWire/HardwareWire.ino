@@ -6,7 +6,7 @@
                                                                                 //
 #include <Wire.h>                                                               // Подключаем библиотеку для работы с аппаратной шиной I2C, до подключения библиотеки iarduino_IR_Thermometer.
 #include <iarduino_IR_Thermometer.h>                                            // Подключаем библиотеку для работы с ИК датчиком температуры
-iarduino_IR_Thermometer sensor;                                                 // Объявляем объект sensor для работы с ИК датчиком температуры. Можно указать адрес датчика на шине I2C: iarduino_IR_Thermometer sensor(0x5A);
+iarduino_IR_Thermometer sensor;                                                 // Создаём объект sensor для работы с ИК датчиком температуры. Можно указать адрес датчика на шине I2C: iarduino_IR_Thermometer sensor(0x5A);
                                                                                 //
 void setup(){                                                                   //
      Serial.begin(9600);                                                        // Инициализируем передачу данных по UART на скорости 9600 бит/сек
