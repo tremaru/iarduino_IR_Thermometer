@@ -1,5 +1,5 @@
 //	Библиотека позволяет работать с ИК-термометром на базе чипа MLX90614ESF-AAA: http://
-//  Версия: 1.0.2
+//  Версия: 1.0.3
 //  Последнюю версию библиотеки Вы можете скачать по ссылке: https://iarduino.ru/file/632.html
 //  Подробное описание функции бибилиотеки доступно по ссылке: http://
 //  Библиотека является собственностью интернет магазина iarduino.ru и может свободно использоваться и распространяться!
@@ -19,7 +19,7 @@
 
 #include	"iarduino_IR_Thermometer_I2C.h"						//	Подключаем библиотеку выбора реализации шины I2C.
 																//
-#if defined(TwoWire_h) || defined(__ARDUINO_WIRE_IMPLEMENTATION__) || defined(__AVR_ATmega328__) || defined(__AVR_ATmega32U4__) || defined(__AVR_ATmega1284P__) || defined(__AVR_ATmega2560__) || defined(ESP8266) || defined(ESP32) || defined(ARDUINO_ARCH_RP2040) || defined(RENESAS_CORTEX_M4) // Если подключена библиотека Wire или платы её поддерживают...
+#if defined(TwoWire_h) || defined(__ARDUINO_WIRE_IMPLEMENTATION__) || defined(__AVR_ATmega328__) || defined(__AVR_ATmega328P__) || defined(__AVR_ATmega32U4__) || defined(__AVR_ATmega1284P__) || defined(__AVR_ATmega2560__) || defined(ESP8266) || defined(ESP32) || defined(ARDUINO_ARCH_RP2040) || defined(RENESAS_CORTEX_M4) // Если подключена библиотека Wire.h или платы её поддерживают...
 #include	<Wire.h>											//	Разрешаем использовать библиотеку Wire в данной библиотеке.
 #endif															//
 #if defined( iarduino_I2C_Software_h )							//	Если библиотека iarduino_I2C_Software подключена в скетче...
